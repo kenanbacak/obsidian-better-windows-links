@@ -9,10 +9,6 @@ Automatically detect and open local Windows drive paths (`C:\...`) and UNC netwo
 - **Live Preview and Reading View**: Works seamlessly in both editing (Live Preview / Source mode) and Reading View, including automatic restoration of UNC `\\` prefixes when CommonMark escapes leading backslashes in rendered Markdown.
 - **Direct opening**: Left-clicking a file opens it in its default Windows application; left-clicking a folder or UNC share opens it in File Explorer.
 - **Context menu**: Right-click any detected path to **Open in default app**, **Reveal in File Explorer** (opens the parent folder and selects the item), or **Copy path**.
-- **Editor commands**: Trigger actions directly from the Command Palette when your cursor is on a path:
-  - `Open path under cursor`
-  - `Reveal path under cursor in File Explorer`
-  - `Copy path under cursor`
 
 ## Supported Path Formats
 

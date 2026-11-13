@@ -1,12 +1,6 @@
-import { Editor, MarkdownView, Notice, Plugin } from "obsidian";
+import { Plugin } from "obsidian";
 import { createWindowsLinksEditorExtension } from "./cm6Extension";
-import {
-	copyWindowsPath,
-	openWindowsPath,
-	revealWindowsPathInExplorer,
-	showPathContextMenu,
-} from "./opener";
-import { detectWindowsPaths, findPathAtOffset } from "./pathDetector";
+import { openWindowsPath, showPathContextMenu } from "./opener";
 import { processReadingViewLinks } from "./postProcessor";
 import { DEFAULT_SETTINGS, WindowsLinksSettings, WindowsLinksSettingTab } from "./settings";
 
@@ -43,57 +37,6 @@ export default class WindowsLinksPlugin extends Plugin {
 			},
 			true,
 		);
-
-		this.addCommand({
-			id: "open-path-at-cursor",
-			name: "Open path under cursor",
-			checkCallback: (checking: boolean) => {
-				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (!view) {
-					return false;
-				}
-				if (!checking) {
-					this.runLinePathAction(view.editor, (path) => {
-						void openWindowsPath(path);
-					});
-				}
-				return true;
-			},
-		});
-
-		this.addCommand({
-			id: "reveal-path-at-cursor",
-			name: "Reveal path under cursor in File Explorer",
-			checkCallback: (checking: boolean) => {
-				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (!view) {
-					return false;
-				}
-				if (!checking) {
-					this.runLinePathAction(view.editor, (path) => {
-						void revealWindowsPathInExplorer(path);
-					});
-				}
-				return true;
-			},
-		});
-
-		this.addCommand({
-			id: "copy-path-at-cursor",
-			name: "Copy path under cursor",
-			checkCallback: (checking: boolean) => {
-				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (!view) {
-					return false;
-				}
-				if (!checking) {
-					this.runLinePathAction(view.editor, (path) => {
-						void copyWindowsPath(path);
-					});
-				}
-				return true;
-			},
-		});
 	}
 
 	onunload(): void {
@@ -116,26 +59,6 @@ export default class WindowsLinksPlugin extends Plugin {
 			HIDE_DELIMITERS_BODY_CLASS,
 			this.settings.stripQuotesInReadingView,
 		);
-	}
-
-	private getPathAtCursor(editor: Editor): string | null {
-		const cursor = editor.getCursor();
-		const lineText = editor.getLine(cursor.line);
-		const exactMatch = findPathAtOffset(lineText, cursor.ch);
-		if (exactMatch) {
-			return exactMatch.normalizedPath;
-		}
-		const lineMatches = detectWindowsPaths(lineText);
-		return lineMatches[0]?.normalizedPath ?? null;
-	}
-
-	private runLinePathAction(editor: Editor, action: (path: string) => void): void {
-		const path = this.getPathAtCursor(editor);
-		if (!path) {
-			new Notice("No Windows or UNC path found on the current line.");
-			return;
-		}
-		action(path);
 	}
 
 	private findTargetPathElement(evt: MouseEvent): HTMLElement | null {

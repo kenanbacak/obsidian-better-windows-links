@@ -295,16 +295,3 @@ function collectUnquotedMatches(
 		});
 	}
 }
-
-/**
- * Finds the detected Windows path covering the given character offset in a line.
- */
-export function findPathAtOffset(text: string, offset: number): DetectedWindowsPath | null {
-	const matches = detectWindowsPaths(text);
-	for (const match of matches) {
-		if (offset >= match.start && offset <= match.end) {
-			return match;
-		}
-	}
-	return null;
-}

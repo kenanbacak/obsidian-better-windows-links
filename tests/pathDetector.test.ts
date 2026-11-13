@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	detectWindowsPaths,
-	findPathAtOffset,
-	normalizeWindowsPath,
-} from "../src/pathDetector";
+import { detectWindowsPaths, normalizeWindowsPath } from "../src/pathDetector";
 
 describe("detectWindowsPaths", () => {
 	it("detects unquoted local drive paths", () => {
@@ -192,14 +188,5 @@ describe("normalizeWindowsPath", () => {
 		});
 		expect(normalizeWindowsPath("\\\\onlyserver")).toBeNull();
 		expect(normalizeWindowsPath("https://obsidian.md")).toBeNull();
-	});
-});
-
-describe("findPathAtOffset", () => {
-	it("finds the path covering a cursor offset", () => {
-		const line = "Open C:\\Users\\Kenan\\notes.txt in editor";
-		const match = findPathAtOffset(line, 10);
-		expect(match?.normalizedPath).toBe("C:\\Users\\Kenan\\notes.txt");
-		expect(findPathAtOffset(line, 0)).toBeNull();
 	});
 });
