@@ -31,7 +31,7 @@ Automatically detect and open local Windows drive paths (`C:\...`) and UNC netwo
 ## Settings
 
 - **Require Ctrl+click in editor**: When enabled, left-clicking a path in Live Preview places the cursor normally, and holding `Ctrl` (or `Cmd` on macOS) + clicking opens the path.
-- **Hide quotes in Reading View**: Strips surrounding double quotes (`"..."`) from quoted paths when rendered in Reading View.
+- **Hide wrapping quotes and brackets**: Hides surrounding double quotes (`"..."`) and angle brackets (`<...>`) when displaying paths in Live Preview and Reading View.
 - **Show path icon**: Displays a subtle folder icon before detected Windows and UNC links.
 
 ## Installation

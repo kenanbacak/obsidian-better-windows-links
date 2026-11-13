@@ -1,4 +1,4 @@
-import { Editor, Notice, Plugin } from "obsidian";
+import { Editor, MarkdownView, Notice, Plugin } from "obsidian";
 import { createWindowsLinksEditorExtension } from "./cm6Extension";
 import {
 	copyWindowsPath,
@@ -6,11 +6,12 @@ import {
 	revealWindowsPathInExplorer,
 	showPathContextMenu,
 } from "./opener";
-import { findPathAtOffset } from "./pathDetector";
+import { detectWindowsPaths, findPathAtOffset } from "./pathDetector";
 import { processReadingViewLinks } from "./postProcessor";
 import { DEFAULT_SETTINGS, WindowsLinksSettings, WindowsLinksSettingTab } from "./settings";
 
 const SHOW_ICON_BODY_CLASS = "windows-links-show-icons";
+const HIDE_DELIMITERS_BODY_CLASS = "windows-links-hide-delimiters";
 
 export default class WindowsLinksPlugin extends Plugin {
 	settings: WindowsLinksSettings = { ...DEFAULT_SETTINGS };
@@ -22,7 +23,7 @@ export default class WindowsLinksPlugin extends Plugin {
 		this.addSettingTab(new WindowsLinksSettingTab(this.app, this));
 		this.registerEditorExtension(createWindowsLinksEditorExtension());
 		this.registerMarkdownPostProcessor((el, ctx) => {
-			processReadingViewLinks(el, ctx, this.settings);
+			processReadingViewLinks(el, ctx);
 		});
 
 		this.registerDomEvent(
@@ -46,45 +47,57 @@ export default class WindowsLinksPlugin extends Plugin {
 		this.addCommand({
 			id: "open-path-at-cursor",
 			name: "Open path under cursor",
-			editorCallback: (editor: Editor) => {
-				const path = this.getPathAtCursor(editor);
-				if (!path) {
-					new Notice("No Windows or UNC path found under the cursor.");
-					return;
+			checkCallback: (checking: boolean) => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!view) {
+					return false;
 				}
-				void openWindowsPath(path);
+				if (!checking) {
+					this.runLinePathAction(view.editor, (path) => {
+						void openWindowsPath(path);
+					});
+				}
+				return true;
 			},
 		});
 
 		this.addCommand({
 			id: "reveal-path-at-cursor",
 			name: "Reveal path under cursor in File Explorer",
-			editorCallback: (editor: Editor) => {
-				const path = this.getPathAtCursor(editor);
-				if (!path) {
-					new Notice("No Windows or UNC path found under the cursor.");
-					return;
+			checkCallback: (checking: boolean) => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!view) {
+					return false;
 				}
-				void revealWindowsPathInExplorer(path);
+				if (!checking) {
+					this.runLinePathAction(view.editor, (path) => {
+						void revealWindowsPathInExplorer(path);
+					});
+				}
+				return true;
 			},
 		});
 
 		this.addCommand({
 			id: "copy-path-at-cursor",
 			name: "Copy path under cursor",
-			editorCallback: (editor: Editor) => {
-				const path = this.getPathAtCursor(editor);
-				if (!path) {
-					new Notice("No Windows or UNC path found under the cursor.");
-					return;
+			checkCallback: (checking: boolean) => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!view) {
+					return false;
 				}
-				void copyWindowsPath(path);
+				if (!checking) {
+					this.runLinePathAction(view.editor, (path) => {
+						void copyWindowsPath(path);
+					});
+				}
+				return true;
 			},
 		});
 	}
 
 	onunload(): void {
-		document.body.classList.remove(SHOW_ICON_BODY_CLASS);
+		document.body.classList.remove(SHOW_ICON_BODY_CLASS, HIDE_DELIMITERS_BODY_CLASS);
 	}
 
 	async loadSettings(): Promise<void> {
@@ -99,13 +112,30 @@ export default class WindowsLinksPlugin extends Plugin {
 
 	private syncBodyClasses(): void {
 		document.body.classList.toggle(SHOW_ICON_BODY_CLASS, this.settings.showFolderIcon);
+		document.body.classList.toggle(
+			HIDE_DELIMITERS_BODY_CLASS,
+			this.settings.stripQuotesInReadingView,
+		);
 	}
 
 	private getPathAtCursor(editor: Editor): string | null {
 		const cursor = editor.getCursor();
 		const lineText = editor.getLine(cursor.line);
-		const match = findPathAtOffset(lineText, cursor.ch);
-		return match ? match.normalizedPath : null;
+		const exactMatch = findPathAtOffset(lineText, cursor.ch);
+		if (exactMatch) {
+			return exactMatch.normalizedPath;
+		}
+		const lineMatches = detectWindowsPaths(lineText);
+		return lineMatches[0]?.normalizedPath ?? null;
+	}
+
+	private runLinePathAction(editor: Editor, action: (path: string) => void): void {
+		const path = this.getPathAtCursor(editor);
+		if (!path) {
+			new Notice("No Windows or UNC path found on the current line.");
+			return;
+		}
+		action(path);
 	}
 
 	private findTargetPathElement(evt: MouseEvent): HTMLElement | null {

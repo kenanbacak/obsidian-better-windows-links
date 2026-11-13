@@ -1,6 +1,5 @@
 import { MarkdownPostProcessorContext } from "obsidian";
-import { detectWindowsPaths, normalizeWindowsPath } from "./pathDetector";
-import { WindowsLinksSettings } from "./settings";
+import { DetectedWindowsPath, detectWindowsPaths, normalizeWindowsPath } from "./pathDetector";
 
 const SKIP_ELEMENT_SELECTOR = "code, pre, a, script, style, .math, mjx-container";
 
@@ -48,7 +47,38 @@ function enhanceExistingAnchors(el: HTMLElement, allowCollapsedUncPrefix: boolea
 		if (!anchor.getAttribute("aria-label")) {
 			anchor.setAttribute("aria-label", normalized.normalizedPath);
 		}
+		// Restore collapsed \\ prefix in autolink display text (e.g. <\\server\share>)
+		const currentText = anchor.textContent ?? "";
+		if (
+			normalized.kind === "unc" &&
+			currentText.startsWith("\\") &&
+			!currentText.startsWith("\\\\")
+		) {
+			anchor.textContent = `\\${currentText}`;
+		}
 	}
+}
+
+function populateLinkContent(link: HTMLAnchorElement, match: DetectedWindowsPath): void {
+	if (match.isQuoted || match.isAngleBracketed) {
+		const openChar = match.isQuoted ? "\"" : "<";
+		const closeChar = match.isQuoted ? "\"" : ">";
+
+		const openSpan = document.createElement("span");
+		openSpan.className = "windows-links-delimiter";
+		openSpan.textContent = openChar;
+
+		const closeSpan = document.createElement("span");
+		closeSpan.className = "windows-links-delimiter";
+		closeSpan.textContent = closeChar;
+
+		link.appendChild(openSpan);
+		link.appendChild(document.createTextNode(match.normalizedPath));
+		link.appendChild(closeSpan);
+		return;
+	}
+
+	link.textContent = match.displayText;
 }
 
 /**
@@ -58,7 +88,6 @@ function enhanceExistingAnchors(el: HTMLElement, allowCollapsedUncPrefix: boolea
 export function processReadingViewLinks(
 	el: HTMLElement,
 	ctx: MarkdownPostProcessorContext,
-	settings: WindowsLinksSettings,
 ): void {
 	const allowCollapsedUncPrefix = shouldAllowCollapsedUnc(el, ctx);
 	enhanceExistingAnchors(el, allowCollapsedUncPrefix);
@@ -101,10 +130,7 @@ export function processReadingViewLinks(
 			link.href = "#";
 			link.dataset.winPath = match.normalizedPath;
 			link.setAttribute("aria-label", match.normalizedPath);
-			link.textContent =
-				settings.stripQuotesInReadingView && match.isQuoted
-					? match.normalizedPath
-					: match.displayText;
+			populateLinkContent(link, match);
 
 			fragment.appendChild(link);
 			cursor = match.end;

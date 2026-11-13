@@ -9,6 +9,14 @@
 	text-decoration: var(--link-external-decoration-hover, var(--link-decoration-hover));
 }
 
+.is-live-preview .windows-links-unc-prefix::before {
+	content: "\\";
+}
+
+.windows-links-hide-delimiters .windows-links-delimiter {
+	display: none;
+}
+
 .windows-links-show-icons .windows-links-path::before {
 	content: "";
 	display: inline-block;

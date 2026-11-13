@@ -6,3 +6,4 @@ data.json
 coverage/
 dist/
 test-vault/
+.obsidian/

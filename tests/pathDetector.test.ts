@@ -73,11 +73,15 @@ describe("detectWindowsPaths", () => {
 			rawMatch: "<C:\\My Documents\\file name.txt>",
 			normalizedPath: "C:\\My Documents\\file name.txt",
 			kind: "local",
+			isAngleBracketed: true,
+			isQuoted: false,
 		});
 		expect(matches[1]).toMatchObject({
 			rawMatch: "<\\\\nas\\Team Share\\notes.md>",
 			normalizedPath: "\\\\nas\\Team Share\\notes.md",
 			kind: "unc",
+			isAngleBracketed: true,
+			isQuoted: false,
 		});
 	});
 
@@ -131,24 +135,34 @@ describe("detectWindowsPaths", () => {
 	});
 
 	it("restores CommonMark-collapsed single-backslash UNC paths when enabled", () => {
-		const collapsedText = "Share at \\server\\share\\folder and \"\\nas\\Team Docs\\spec.pdf\"";
+		const collapsedText =
+			'Share at \\server\\share\\folder, "\\nas\\Team Docs\\spec.pdf", and <\\nas\\Docs\\guide.pdf>';
 
 		expect(detectWindowsPaths(collapsedText)).toHaveLength(0);
 
 		const restored = detectWindowsPaths(collapsedText, {
 			allowCollapsedUncPrefix: true,
 		});
-		expect(restored).toHaveLength(2);
+		expect(restored).toHaveLength(3);
 		expect(restored[0]).toMatchObject({
 			rawMatch: "\\server\\share\\folder",
+			displayText: "\\\\server\\share\\folder",
 			normalizedPath: "\\\\server\\share\\folder",
 			kind: "unc",
 		});
 		expect(restored[1]).toMatchObject({
 			rawMatch: '"\\nas\\Team Docs\\spec.pdf"',
+			displayText: '"\\\\nas\\Team Docs\\spec.pdf"',
 			normalizedPath: "\\\\nas\\Team Docs\\spec.pdf",
 			kind: "unc",
 			isQuoted: true,
+		});
+		expect(restored[2]).toMatchObject({
+			rawMatch: "<\\nas\\Docs\\guide.pdf>",
+			displayText: "<\\\\nas\\Docs\\guide.pdf>",
+			normalizedPath: "\\\\nas\\Docs\\guide.pdf",
+			kind: "unc",
+			isAngleBracketed: true,
 		});
 	});
 

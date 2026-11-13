@@ -1,5 +1,5 @@
 import { syntaxTree } from "@codemirror/language";
-import { Extension, RangeSetBuilder } from "@codemirror/state";
+import { Extension, Range } from "@codemirror/state";
 import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
 import { detectWindowsPaths } from "./pathDetector";
 
@@ -36,8 +36,17 @@ function overlapsCodeRange(ranges: readonly CodeRange[], start: number, end: num
 	return false;
 }
 
+function selectionOverlapsRange(view: EditorView, from: number, to: number): boolean {
+	for (const range of view.state.selection.ranges) {
+		if (range.from <= to && range.to >= from) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function buildDecorations(view: EditorView): DecorationSet {
-	const builder = new RangeSetBuilder<Decoration>();
+	const decorations: Range<Decoration>[] = [];
 	let lastProcessedLine = -1;
 
 	for (const visibleRange of view.visibleRanges) {
@@ -57,14 +66,51 @@ function buildDecorations(view: EditorView): DecorationSet {
 						if (matchFrom >= matchTo || overlapsCodeRange(codeRanges, matchFrom, matchTo)) {
 							continue;
 						}
-						const decoration = Decoration.mark({
-							class: "windows-links-path",
-							attributes: {
-								"data-win-path": match.normalizedPath,
-								"aria-label": match.normalizedPath,
-							},
-						});
-						builder.add(matchFrom, matchTo, decoration);
+
+						decorations.push(
+							Decoration.mark({
+								class: "windows-links-path",
+								attributes: {
+									"data-win-path": match.normalizedPath,
+									"aria-label": match.normalizedPath,
+								},
+							}).range(matchFrom, matchTo),
+						);
+
+						// Restore the leading \\ visually in Live Preview when Obsidian's
+						// Markdown escape hider collapses the first backslash.
+						if (match.kind === "unc" && !match.rawMatch.startsWith("[")) {
+							const uncRelIndex = match.rawMatch.indexOf("\\\\");
+							if (uncRelIndex >= 0) {
+								const uncPos = matchFrom + uncRelIndex;
+								if (!selectionOverlapsRange(view, uncPos, uncPos + 2)) {
+									decorations.push(
+										Decoration.mark({
+											class: "windows-links-unc-prefix",
+										}).range(uncPos + 1, uncPos + 2),
+									);
+								}
+							}
+						}
+
+						// Mark wrapping quotes ("...") or angle brackets (<...>) so the
+						// user setting can hide them cleanly when the cursor is away.
+						if (
+							(match.isQuoted || match.isAngleBracketed) &&
+							matchTo - matchFrom >= 2 &&
+							!selectionOverlapsRange(view, matchFrom, matchTo)
+						) {
+							decorations.push(
+								Decoration.mark({
+									class: "windows-links-delimiter",
+								}).range(matchFrom, matchFrom + 1),
+							);
+							decorations.push(
+								Decoration.mark({
+									class: "windows-links-delimiter",
+								}).range(matchTo - 1, matchTo),
+							);
+						}
 					}
 				}
 			}
@@ -76,7 +122,7 @@ function buildDecorations(view: EditorView): DecorationSet {
 		}
 	}
 
-	return builder.finish();
+	return Decoration.set(decorations, true);
 }
 
 /**
@@ -96,6 +142,7 @@ export function createWindowsLinksEditorExtension(): Extension {
 				if (
 					update.docChanged ||
 					update.viewportChanged ||
+					update.selectionSet ||
 					syntaxTree(update.startState) !== syntaxTree(update.state)
 				) {
 					this.decorations = buildDecorations(update.view);

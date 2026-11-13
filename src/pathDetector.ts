@@ -24,6 +24,8 @@ export interface DetectedWindowsPath {
 	kind: WindowsPathKind;
 	/** True when the raw match is wrapped in double quotes. */
 	isQuoted: boolean;
+	/** True when the raw match is wrapped in angle brackets. */
+	isAngleBracketed: boolean;
 }
 
 interface TextRange {
@@ -182,6 +184,7 @@ export function detectWindowsPaths(
 			end,
 			kind: normalized.kind,
 			isQuoted: false,
+			isAngleBracketed: false,
 		});
 	}
 
@@ -198,15 +201,18 @@ export function detectWindowsPaths(
 		if (!normalized) {
 			continue;
 		}
+		const restoredCollapsedUnc =
+			normalized.kind === "unc" && inner.startsWith("\\") && !inner.startsWith("\\\\");
 
 		addResult({
 			rawMatch,
-			displayText: rawMatch,
+			displayText: restoredCollapsedUnc ? `<${normalized.normalizedPath}>` : rawMatch,
 			normalizedPath: normalized.normalizedPath,
 			start,
 			end: start + rawMatch.length,
 			kind: normalized.kind,
 			isQuoted: false,
+			isAngleBracketed: true,
 		});
 	}
 
@@ -223,15 +229,18 @@ export function detectWindowsPaths(
 		if (!normalized) {
 			continue;
 		}
+		const restoredCollapsedUnc =
+			normalized.kind === "unc" && inner.startsWith("\\") && !inner.startsWith("\\\\");
 
 		addResult({
 			rawMatch,
-			displayText: rawMatch,
+			displayText: restoredCollapsedUnc ? `"${normalized.normalizedPath}"` : rawMatch,
 			normalizedPath: normalized.normalizedPath,
 			start,
 			end: start + rawMatch.length,
 			kind: normalized.kind,
 			isQuoted: true,
+			isAngleBracketed: false,
 		});
 	}
 
@@ -271,14 +280,18 @@ function collectUnquotedMatches(
 			continue;
 		}
 
+		const restoredCollapsedUnc =
+			normalized.kind === "unc" && cleaned.startsWith("\\") && !cleaned.startsWith("\\\\");
+
 		addResult({
 			rawMatch: cleaned,
-			displayText: cleaned,
+			displayText: restoredCollapsedUnc ? normalized.normalizedPath : cleaned,
 			normalizedPath: normalized.normalizedPath,
 			start,
 			end: start + cleaned.length,
 			kind: normalized.kind,
 			isQuoted: false,
+			isAngleBracketed: false,
 		});
 	}
 }

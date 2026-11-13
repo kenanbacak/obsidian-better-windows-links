@@ -47,9 +47,9 @@ export class WindowsLinksSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Hide quotes in Reading View")
+			.setName("Hide wrapping quotes and brackets")
 			.setDesc(
-				"Remove surrounding double quotes from quoted paths when rendered in Reading View.",
+				"Hide surrounding double quotes (\"...\") and angle brackets (<...>) when displaying paths.",
 			)
 			.addToggle((toggle) =>
 				toggle

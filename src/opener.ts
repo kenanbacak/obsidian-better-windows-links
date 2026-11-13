@@ -49,11 +49,19 @@ async function pathIsAccessible(targetPath: string): Promise<boolean> {
 	}
 }
 
-function openWithFileExplorer(targetPath: string): Promise<boolean> {
-	return new Promise((resolve) => {
-		execFile("explorer.exe", [targetPath], (error) => {
-			resolve(error === null);
-		});
+async function isDirectoryPath(targetPath: string): Promise<boolean> {
+	try {
+		const stats = await fsPromises.stat(targetPath);
+		return stats.isDirectory();
+	} catch {
+		return false;
+	}
+}
+
+function launchExplorer(args: string[]): void {
+	execFile("explorer.exe", args, () => {
+		// explorer.exe frequently exits with code 1 when delegating to an existing
+		// Explorer instance, so non-zero exit codes do not indicate failure.
 	});
 }
 
@@ -69,17 +77,25 @@ export async function openWindowsPath(rawPath: string): Promise<void> {
 		return;
 	}
 
+	if (Platform.isWin) {
+		const isDirectory = await isDirectoryPath(targetPath);
+		if (isDirectory) {
+			launchExplorer([targetPath]);
+			return;
+		}
+	}
+
 	const errorMessage = await electronShell.openPath(targetPath);
 	if (!errorMessage) {
 		return;
 	}
 
-	// Electron's shell.openPath can return an error on certain UNC share roots
+	// Fallback for UNC share roots where stat/openPath can report an error
 	// even when File Explorer can browse them directly.
 	if (Platform.isWin && UNC_SHARE_ROOT_PATTERN.test(targetPath)) {
 		const accessible = await pathIsAccessible(targetPath);
 		if (accessible) {
-			await openWithFileExplorer(targetPath);
+			launchExplorer([targetPath]);
 			return;
 		}
 	}
@@ -88,7 +104,7 @@ export async function openWindowsPath(rawPath: string): Promise<void> {
 }
 
 /**
- * Opens File Explorer and selects the target file or folder.
+ * Opens File Explorer in the foreground and selects the target file or folder.
  */
 export async function revealWindowsPathInExplorer(rawPath: string): Promise<void> {
 	const targetPath = cleanTargetPath(rawPath);
@@ -101,6 +117,11 @@ export async function revealWindowsPathInExplorer(rawPath: string): Promise<void
 	const exists = await pathIsAccessible(targetPath);
 	if (!exists) {
 		new Notice(`Path not found or unreachable: ${targetPath}`);
+		return;
+	}
+
+	if (Platform.isWin) {
+		launchExplorer([`/select,${targetPath}`]);
 		return;
 	}
 
