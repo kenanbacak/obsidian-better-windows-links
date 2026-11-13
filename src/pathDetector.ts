@@ -35,8 +35,67 @@ interface TextRange {
 
 const TRAILING_PUNCTUATION = new Set([".", ",", ";", ":", "!", "?", "'", "\""]);
 const LOCAL_DRIVE_PATTERN = /^[a-zA-Z]:\\[^:*?"<>|\r\n]*$/;
-const UNC_PATTERN = /^\\\\[a-zA-Z0-9._-]+\\[^\\/:*?"<>|\r\n]+(?:\\[^:*?"<>|\r\n]*)*$/;
-const COLLAPSED_UNC_PATTERN = /^\\[a-zA-Z0-9._-]+\\[^\\/:*?"<>|\r\n]+(?:\\[^:*?"<>|\r\n]*)*$/;
+const UNC_PATTERN =
+	/^\\\\[a-zA-Z0-9](?:[a-zA-Z0-9._-]*[a-zA-Z0-9])?\\[^\\/:*?"<>|\r\n]+(?:\\[^:*?"<>|\r\n]*)*$/;
+const COLLAPSED_UNC_PATTERN =
+	/^\\[a-zA-Z0-9](?:[a-zA-Z0-9._-]*[a-zA-Z0-9])?\\[^\\/:*?"<>|\r\n]+(?:\\[^:*?"<>|\r\n]*)*$/;
+const TRAVERSAL_SEGMENT_PATTERN = /(?:^|\\)\.\.(?:\\|$)/;
+
+const EXECUTABLE_EXTENSIONS = new Set([
+	".exe",
+	".bat",
+	".cmd",
+	".com",
+	".scr",
+	".pif",
+	".msi",
+	".msp",
+	".ps1",
+	".psm1",
+	".vbs",
+	".vbe",
+	".js",
+	".jse",
+	".wsf",
+	".wsh",
+	".hta",
+	".cpl",
+	".msc",
+	".reg",
+	".lnk",
+	".inf",
+	".jar",
+	".scf",
+	".url",
+	".appref-ms",
+	".application",
+	".gadget",
+]);
+
+function hasControlCharacters(value: string): boolean {
+	for (let i = 0; i < value.length; i++) {
+		const code = value.charCodeAt(i);
+		if (code < 0x20 || code === 0x7f) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Returns true if the target Windows path resolves to an executable, script,
+ * or shortcut extension (accounting for trailing dots/spaces ignored by NTFS).
+ */
+export function isExecutableWindowsPath(targetPath: string): boolean {
+	const cleaned = targetPath.trim().replace(/[. ]+$/, "");
+	const lastSlash = cleaned.lastIndexOf("\\");
+	const fileName = lastSlash >= 0 ? cleaned.slice(lastSlash + 1) : cleaned;
+	const dotIndex = fileName.lastIndexOf(".");
+	if (dotIndex <= 0) {
+		return false;
+	}
+	return EXECUTABLE_EXTENSIONS.has(fileName.slice(dotIndex).toLowerCase());
+}
 
 /**
  * Strips unbalanced trailing punctuation from an unquoted path match while
@@ -97,7 +156,7 @@ export function normalizeWindowsPath(
 	options: DetectWindowsPathsOptions = {},
 ): { normalizedPath: string; kind: WindowsPathKind } | null {
 	let trimmed = rawPath.trim();
-	if (trimmed.length === 0) {
+	if (trimmed.length === 0 || hasControlCharacters(trimmed) || TRAVERSAL_SEGMENT_PATTERN.test(trimmed)) {
 		return null;
 	}
 
@@ -108,7 +167,7 @@ export function normalizeWindowsPath(
 		trimmed = trimmed.slice(1, -1).trim();
 	}
 
-	if (trimmed.length === 0) {
+	if (trimmed.length === 0 || hasControlCharacters(trimmed) || TRAVERSAL_SEGMENT_PATTERN.test(trimmed)) {
 		return null;
 	}
 

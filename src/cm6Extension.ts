@@ -73,6 +73,7 @@ function buildDecorations(view: EditorView): DecorationSet {
 								attributes: {
 									"data-win-path": match.normalizedPath,
 									"aria-label": match.normalizedPath,
+									title: match.normalizedPath,
 								},
 							}).range(matchFrom, matchTo),
 						);

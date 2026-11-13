@@ -3,16 +3,22 @@ import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 export interface WindowsLinksSettings {
 	/** Require holding Ctrl (or Cmd on macOS) when clicking paths in the editor. */
 	requireCtrlClickInEditor: boolean;
-	/** Hide surrounding double quotes on quoted paths in Reading View. */
+	/** Hide surrounding double quotes and angle brackets when displaying paths. */
 	stripQuotesInReadingView: boolean;
 	/** Display a subtle path icon before detected Windows and UNC links. */
 	showFolderIcon: boolean;
+	/** Prompt for confirmation before opening executable, script, or shortcut files. */
+	confirmExecutablePaths: boolean;
+	/** Prompt for confirmation before accessing UNC network paths. */
+	confirmUncPaths: boolean;
 }
 
 export const DEFAULT_SETTINGS: WindowsLinksSettings = {
 	requireCtrlClickInEditor: false,
 	stripQuotesInReadingView: false,
 	showFolderIcon: false,
+	confirmExecutablePaths: true,
+	confirmUncPaths: false,
 };
 
 export interface WindowsLinksPluginHost extends Plugin {
@@ -68,6 +74,34 @@ export class WindowsLinksSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.showFolderIcon)
 					.onChange(async (value) => {
 						this.plugin.settings.showFolderIcon = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Confirm before opening executable files")
+			.setDesc(
+				"Show a confirmation prompt before launching executable, script, or shortcut files (such as .exe, .bat, .ps1, or .lnk).",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.confirmExecutablePaths)
+					.onChange(async (value) => {
+						this.plugin.settings.confirmExecutablePaths = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Confirm before accessing UNC network paths")
+			.setDesc(
+				"Show a confirmation prompt before connecting to UNC network shares (\\\\server\\share).",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.confirmUncPaths)
+					.onChange(async (value) => {
+						this.plugin.settings.confirmUncPaths = value;
 						await this.plugin.saveSettings();
 					}),
 			);

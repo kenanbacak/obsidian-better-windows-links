@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { detectWindowsPaths, normalizeWindowsPath } from "../src/pathDetector";
+import {
+	detectWindowsPaths,
+	isExecutableWindowsPath,
+	normalizeWindowsPath,
+} from "../src/pathDetector";
 
 describe("detectWindowsPaths", () => {
 	it("detects unquoted local drive paths", () => {
@@ -188,5 +192,31 @@ describe("normalizeWindowsPath", () => {
 		});
 		expect(normalizeWindowsPath("\\\\onlyserver")).toBeNull();
 		expect(normalizeWindowsPath("https://obsidian.md")).toBeNull();
+	});
+
+	it("rejects Win32 device namespaces, path traversal segments, and control characters", () => {
+		expect(normalizeWindowsPath("\\\\.\\PhysicalDrive0")).toBeNull();
+		expect(normalizeWindowsPath("\\\\?\\C:\\Windows\\notepad.exe")).toBeNull();
+		expect(normalizeWindowsPath("\\\\..\\share\\file.txt")).toBeNull();
+		expect(normalizeWindowsPath("C:\\Safe\\..\\Windows\\System32\\cmd.exe")).toBeNull();
+		expect(normalizeWindowsPath("\\\\server\\share\\..\\secret.txt")).toBeNull();
+		expect(normalizeWindowsPath("C:\\Folder\\file\u0000.txt")).toBeNull();
+		expect(normalizeWindowsPath("C:\\Folder\\report..pdf")).toEqual({
+			normalizedPath: "C:\\Folder\\report..pdf",
+			kind: "local",
+		});
+	});
+});
+
+describe("isExecutableWindowsPath", () => {
+	it("identifies executable, script, and shortcut extensions including trailing dots", () => {
+		expect(isExecutableWindowsPath("C:\\Windows\\notepad.exe")).toBe(true);
+		expect(isExecutableWindowsPath("\\\\server\\share\\setup.BAT")).toBe(true);
+		expect(isExecutableWindowsPath("C:\\Scripts\\deploy.ps1")).toBe(true);
+		expect(isExecutableWindowsPath("C:\\Users\\Public\\shortcut.lnk")).toBe(true);
+		expect(isExecutableWindowsPath("C:\\Temp\\payload.exe.. ")).toBe(true);
+		expect(isExecutableWindowsPath("C:\\Docs\\report.pdf")).toBe(false);
+		expect(isExecutableWindowsPath("C:\\Docs\\notes.txt")).toBe(false);
+		expect(isExecutableWindowsPath("C:\\Folders\\my.exe.folder\\readme.md")).toBe(false);
 	});
 });

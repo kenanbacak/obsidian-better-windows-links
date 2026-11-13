@@ -47,6 +47,9 @@ function enhanceExistingAnchors(el: HTMLElement, allowCollapsedUncPrefix: boolea
 		if (!anchor.getAttribute("aria-label")) {
 			anchor.setAttribute("aria-label", normalized.normalizedPath);
 		}
+		if (!anchor.getAttribute("title")) {
+			anchor.setAttribute("title", normalized.normalizedPath);
+		}
 		// Restore collapsed \\ prefix in autolink display text (e.g. <\\server\share>)
 		const currentText = anchor.textContent ?? "";
 		if (
@@ -130,6 +133,7 @@ export function processReadingViewLinks(
 			link.href = "#";
 			link.dataset.winPath = match.normalizedPath;
 			link.setAttribute("aria-label", match.normalizedPath);
+			link.setAttribute("title", match.normalizedPath);
 			populateLinkContent(link, match);
 
 			fragment.appendChild(link);

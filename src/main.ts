@@ -94,7 +94,7 @@ export default class WindowsLinksPlugin extends Plugin {
 
 		evt.preventDefault();
 		evt.stopPropagation();
-		void openWindowsPath(winPath);
+		void openWindowsPath(winPath, { app: this.app, settings: this.settings });
 	}
 
 	private handlePathContextMenu(evt: MouseEvent): void {
@@ -109,6 +109,6 @@ export default class WindowsLinksPlugin extends Plugin {
 
 		evt.preventDefault();
 		evt.stopPropagation();
-		showPathContextMenu(evt, winPath);
+		showPathContextMenu(evt, winPath, { app: this.app, settings: this.settings });
 	}
 }
