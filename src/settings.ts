@@ -41,7 +41,7 @@ export class WindowsLinksSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Require Ctrl+click in editor")
 			.setDesc(
-				"Open paths in Live Preview only when holding Ctrl (or Cmd on macOS), allowing normal clicks to place the cursor.",
+				"Open paths in live preview only when holding Ctrl (or Command on macOS), allowing normal clicks to place the cursor.",
 			)
 			.addToggle((toggle) =>
 				toggle

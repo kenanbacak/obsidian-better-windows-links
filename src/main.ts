@@ -1,4 +1,4 @@
-import { Plugin } from "obsidian";
+import { MarkdownView, Plugin } from "obsidian";
 import { createWindowsLinksEditorExtension } from "./cm6Extension";
 import { openWindowsPath, showPathContextMenu } from "./opener";
 import { processReadingViewLinks } from "./postProcessor";
@@ -9,15 +9,19 @@ const HIDE_DELIMITERS_BODY_CLASS = "windows-links-hide-delimiters";
 
 export default class WindowsLinksPlugin extends Plugin {
 	settings: WindowsLinksSettings = { ...DEFAULT_SETTINGS };
+	private isUnloading = false;
 
 	async onload(): Promise<void> {
+		this.isUnloading = false;
 		await this.loadSettings();
 		this.syncBodyClasses();
 
 		this.addSettingTab(new WindowsLinksSettingTab(this.app, this));
 		this.registerEditorExtension(createWindowsLinksEditorExtension());
 		this.registerMarkdownPostProcessor((el, ctx) => {
-			processReadingViewLinks(el, ctx);
+			if (!this.isUnloading) {
+				processReadingViewLinks(el, ctx);
+			}
 		});
 
 		this.registerDomEvent(
@@ -37,10 +41,24 @@ export default class WindowsLinksPlugin extends Plugin {
 			},
 			true,
 		);
+
+		this.app.workspace.onLayoutReady(() => {
+			this.refreshReadingViews();
+		});
 	}
 
 	onunload(): void {
+		this.isUnloading = true;
 		document.body.classList.remove(SHOW_ICON_BODY_CLASS, HIDE_DELIMITERS_BODY_CLASS);
+		this.refreshReadingViews();
+	}
+
+	private refreshReadingViews(): void {
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			if (leaf.view instanceof MarkdownView) {
+				leaf.view.previewMode.rerender(true);
+			}
+		});
 	}
 
 	async loadSettings(): Promise<void> {

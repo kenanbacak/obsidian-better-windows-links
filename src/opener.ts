@@ -1,17 +1,9 @@
 import { execFile } from "child_process";
+import { shell } from "electron";
 import { promises as fsPromises } from "fs";
-import { App, Menu, Modal, Notice, Platform } from "obsidian";
+import { App, Menu, Modal, Notice, Platform, Setting } from "obsidian";
 import { isExecutableWindowsPath, normalizeWindowsPath, WindowsPathKind } from "./pathDetector";
 import { WindowsLinksSettings } from "./settings";
-
-interface ElectronShell {
-	openPath: (targetPath: string) => Promise<string>;
-	showItemInFolder: (fullPath: string) => void;
-}
-
-interface ElectronModule {
-	shell?: ElectronShell;
-}
 
 export interface PathActionContext {
 	app: App;
@@ -25,7 +17,7 @@ interface ConfirmModalOptions {
 	message: string;
 	targetPath: string;
 	confirmLabel: string;
-	confirmButtonClass: "mod-warning" | "mod-cta";
+	confirmStyle: "warning" | "cta";
 	allowReveal: boolean;
 }
 
@@ -47,36 +39,40 @@ class ConfirmPathOpenModal extends Modal {
 	}
 
 	onOpen(): void {
-		const { contentEl, titleEl } = this;
-		titleEl.setText(this.options.title);
+		const { contentEl } = this;
+		this.setTitle(this.options.title);
 
 		contentEl.createEl("p", { text: this.options.message });
 
 		const pathBox = contentEl.createEl("div", { cls: "windows-links-modal-path" });
 		pathBox.createEl("code", { text: this.options.targetPath });
 
-		const buttonContainer = contentEl.createEl("div", { cls: "modal-button-container" });
+		const buttonBar = new Setting(contentEl);
 
 		if (this.options.allowReveal) {
-			const revealBtn = buttonContainer.createEl("button", {
-				text: "Reveal in File Explorer",
-			});
-			revealBtn.addEventListener("click", () => {
-				this.finish("reveal");
-			});
+			buttonBar.addButton((btn) =>
+				btn.setButtonText("Reveal in file explorer").onClick(() => {
+					this.finish("reveal");
+				}),
+			);
 		}
 
-		const cancelBtn = buttonContainer.createEl("button", { text: "Cancel" });
-		cancelBtn.addEventListener("click", () => {
-			this.finish("cancel");
-		});
+		buttonBar.addButton((btn) =>
+			btn.setButtonText("Cancel").onClick(() => {
+				this.finish("cancel");
+			}),
+		);
 
-		const confirmBtn = buttonContainer.createEl("button", {
-			text: this.options.confirmLabel,
-			cls: this.options.confirmButtonClass,
-		});
-		confirmBtn.addEventListener("click", () => {
-			this.finish("open");
+		buttonBar.addButton((btn) => {
+			btn.setButtonText(this.options.confirmLabel);
+			if (this.options.confirmStyle === "warning") {
+				btn.setWarning();
+			} else {
+				btn.setCta();
+			}
+			btn.onClick(() => {
+				this.finish("open");
+			});
 		});
 	}
 
@@ -102,24 +98,6 @@ function promptPathConfirmation(app: App, options: ConfirmModalOptions): Promise
 		const modal = new ConfirmPathOpenModal(app, options, resolve);
 		modal.open();
 	});
-}
-
-function getElectronShell(): ElectronShell | null {
-	if (!Platform.isDesktopApp) {
-		return null;
-	}
-	const electronWindow = window as unknown as {
-		require?: (moduleId: string) => ElectronModule;
-	};
-	if (typeof electronWindow.require !== "function") {
-		return null;
-	}
-	try {
-		const electron = electronWindow.require("electron");
-		return electron.shell ?? null;
-	} catch {
-		return null;
-	}
 }
 
 function validateTargetPath(
@@ -167,7 +145,7 @@ async function confirmUncAccessIfNeeded(
 			"This link points to a remote UNC network path. Connecting to untrusted servers may expose network credentials:",
 		targetPath,
 		confirmLabel: "Open path",
-		confirmButtonClass: "mod-cta",
+		confirmStyle: "cta",
 		allowReveal: false,
 	});
 	return decision === "open";
@@ -176,7 +154,6 @@ async function confirmUncAccessIfNeeded(
 async function revealValidatedPath(
 	targetPath: string,
 	kind: WindowsPathKind,
-	electronShell: ElectronShell,
 	context: PathActionContext,
 ): Promise<void> {
 	const uncConfirmed = await confirmUncAccessIfNeeded(targetPath, kind, context);
@@ -197,12 +174,12 @@ async function revealValidatedPath(
 		return;
 	}
 
-	electronShell.showItemInFolder(targetPath);
+	shell.showItemInFolder(targetPath);
 }
 
 /**
  * Opens a local Windows file/folder or UNC network path using the default
- * Windows application or File Explorer, prompting before risky actions.
+ * Windows application or file explorer, prompting before risky actions.
  */
 export async function openWindowsPath(
 	rawPath: string,
@@ -215,8 +192,7 @@ export async function openWindowsPath(
 	}
 	const { normalizedPath: targetPath, kind } = validated;
 
-	const electronShell = getElectronShell();
-	if (!electronShell) {
+	if (!Platform.isDesktopApp) {
 		new Notice("Windows link opening is only available on the desktop app.");
 		return;
 	}
@@ -230,14 +206,14 @@ export async function openWindowsPath(
 				"This link points to an executable, script, or shortcut file that may run code on your computer:",
 			targetPath,
 			confirmLabel: "Run file",
-			confirmButtonClass: "mod-warning",
+			confirmStyle: "warning",
 			allowReveal: true,
 		});
 		if (decision === "cancel") {
 			return;
 		}
 		if (decision === "reveal") {
-			await revealValidatedPath(targetPath, kind, electronShell, context);
+			await revealValidatedPath(targetPath, kind, context);
 			return;
 		}
 	} else {
@@ -255,13 +231,13 @@ export async function openWindowsPath(
 		}
 	}
 
-	const errorMessage = await electronShell.openPath(targetPath);
+	const errorMessage = await shell.openPath(targetPath);
 	if (!errorMessage) {
 		return;
 	}
 
 	// Fallback for UNC share roots where stat/openPath can report an error
-	// even when File Explorer can browse them directly.
+	// even when file explorer can browse them directly.
 	if (Platform.isWin && UNC_SHARE_ROOT_PATTERN.test(targetPath) && !targetPath.includes(",")) {
 		const accessible = await pathIsAccessible(targetPath);
 		if (accessible) {
@@ -274,7 +250,7 @@ export async function openWindowsPath(
 }
 
 /**
- * Opens File Explorer in the foreground and selects the target file or folder.
+ * Opens file explorer in the foreground and selects the target file or folder.
  */
 export async function revealWindowsPathInExplorer(
 	rawPath: string,
@@ -286,18 +262,12 @@ export async function revealWindowsPathInExplorer(
 		return;
 	}
 
-	const electronShell = getElectronShell();
-	if (!electronShell) {
-		new Notice("File Explorer integration is only available on the desktop app.");
+	if (!Platform.isDesktopApp) {
+		new Notice("File explorer integration is only available on the desktop app.");
 		return;
 	}
 
-	await revealValidatedPath(
-		validated.normalizedPath,
-		validated.kind,
-		electronShell,
-		context,
-	);
+	await revealValidatedPath(validated.normalizedPath, validated.kind, context);
 }
 
 /**
@@ -339,7 +309,7 @@ export function showPathContextMenu(
 
 	menu.addItem((item) =>
 		item
-			.setTitle("Reveal in File Explorer")
+			.setTitle("Reveal in file explorer")
 			.setIcon("folder-open")
 			.onClick(() => {
 				void revealWindowsPathInExplorer(rawPath, context);

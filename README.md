@@ -8,7 +8,7 @@ Automatically detect and open local Windows drive paths (`C:\...`) and UNC netwo
 - **Spaces and special syntax support**: Handles paths containing spaces wrapped in double quotes (`"C:\Program Files\App\app.exe"` — matching Windows File Explorer's *Copy as path* format), angle brackets (`<C:\My Documents\notes.txt>`), and standard Markdown links (`[Project Folder](C:\Projects\MyApp)`).
 - **Live Preview and Reading View**: Works seamlessly in both editing (Live Preview / Source mode) and Reading View, including automatic restoration of UNC `\\` prefixes when CommonMark escapes leading backslashes in rendered Markdown.
 - **Direct opening**: Left-clicking a file opens it in its default Windows application; left-clicking a folder or UNC share opens it in File Explorer.
-- **Context menu**: Right-click any detected path to **Open in default app**, **Reveal in File Explorer** (opens the parent folder and selects the item), or **Copy path**.
+- **Context menu**: Right-click any detected path to **Open in default app**, **Reveal in file explorer** (opens the parent folder and selects the item), or **Copy path**.
 
 ## Supported Path Formats
 
