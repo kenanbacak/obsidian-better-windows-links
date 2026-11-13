@@ -4,6 +4,7 @@
 	"version": "1.0.0",
 	"minAppVersion": "1.5.0",
 	"description": "Automatically detect and open local Windows and UNC network paths directly from your notes.",
-	"author": "Kenan",
+	"author": "kenanbacak",
+	"authorUrl": "https://github.com/kenanbacak",
 	"isDesktopOnly": true
 }

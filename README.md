@@ -26,11 +26,15 @@ Automatically detect and open local Windows drive paths (`C:\...`) and UNC netwo
 
 ## Settings
 
-- **Require Ctrl+click in editor**: When enabled, left-clicking a path in Live Preview places the cursor normally, and holding `Ctrl` (or `Cmd` on macOS) + clicking opens the path.
+- **Require Ctrl+click in editor**: When enabled, left-clicking a path in Live Preview places the cursor normally, and holding `Ctrl` + clicking opens the path.
 - **Hide wrapping quotes and brackets**: Hides surrounding double quotes (`"..."`) and angle brackets (`<...>`) when displaying paths in Live Preview and Reading View.
 - **Show path icon**: Displays a subtle folder icon before detected Windows and UNC links.
 - **Confirm before opening executable files**: Enabled by default. Shows a confirmation dialog displaying the full target path before launching executable, script, or shortcut files (`.exe`, `.bat`, `.ps1`, `.lnk`, etc.).
 - **Confirm before accessing UNC network paths**: Optional security prompt before connecting to UNC network shares (`\\server\share`).
+
+## Platform Support
+
+This plugin is built and tested exclusively on **Windows** desktop (`explorer.exe` and Windows drive/UNC path conventions). It has **not** been tested on macOS or Linux.
 
 ## Installation
 
