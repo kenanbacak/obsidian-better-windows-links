@@ -1,4 +1,4 @@
-# Windows Links
+# Better Windows Links
 
 Automatically detect and open local Windows drive paths (`C:\...`) and UNC network paths (`\\server\share\...`) directly from your Obsidian notes.
 
@@ -41,8 +41,8 @@ This plugin is built and tested exclusively on **Windows** desktop (`explorer.ex
 ### Manual installation
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the latest GitHub Release.
-2. Copy them into `<your-vault>/.obsidian/plugins/windows-links/`.
-3. Reload Obsidian and enable **Windows Links** under **Settings → Community plugins**.
+2. Copy them into `<your-vault>/.obsidian/plugins/better-windows-links/`.
+3. Reload Obsidian and enable **Better Windows Links** under **Settings → Community plugins**.
 
 ## Development
 

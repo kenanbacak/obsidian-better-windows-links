@@ -1,5 +1,5 @@
 {
-	"name": "obsidian-windows-links",
+	"name": "obsidian-better-windows-links",
 	"version": "1.0.0",
 	"description": "Automatically detect and open local Windows and UNC network paths directly from your notes.",
 	"main": "main.js",
