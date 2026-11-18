@@ -305,13 +305,13 @@ export function detectWindowsPaths(
 
 	// 4. Unquoted local drive and UNC paths
 	const unquotedLocalAndUncRegex =
-		/(?:^|(?<=[\s(["'=<|>]))((?:[a-zA-Z]:\\|\\\\[a-zA-Z0-9._-]+\\)[^\s\\/:*?"<>|]*(?:\\[^\s\\/:*?"<>|]*)*)/g;
+		/(?:^|(?<=[\s(["'{=<|>]))((?:[a-zA-Z]:\\|\\\\[a-zA-Z0-9._-]+\\)[^\s\\/:*?"<>|]*(?:\\[^\s\\/:*?"<>|]*)*)/g;
 	collectUnquotedMatches(text, unquotedLocalAndUncRegex, options, addResult);
 
 	// 5. Reading View fallback for CommonMark-collapsed single-backslash UNC paths (\server\share)
 	if (allowCollapsedUnc) {
 		const collapsedUncRegex =
-			/(?:^|(?<=[\s(["'=<|>]))(\\[a-zA-Z0-9._-]+\\[^\s\\/:*?"<>|]+(?:\\[^\s\\/:*?"<>|]*)*)/g;
+			/(?:^|(?<=[\s(["'{=<|>]))(\\[a-zA-Z0-9._-]+\\[^\s\\/:*?"<>|]+(?:\\[^\s\\/:*?"<>|]*)*)/g;
 		collectUnquotedMatches(text, collapsedUncRegex, options, addResult);
 	}
 

@@ -182,6 +182,51 @@ describe("detectWindowsPaths", () => {
 		expect(matches[0].normalizedPath).toBe("C:\\Logs\\quote.log");
 		expect(matches[1].normalizedPath).toBe("C:\\Data\\sheet.xlsx");
 	});
+
+	it("detects administrative/hidden UNC shares with $, FQDN hosts, and single-char hosts", () => {
+		const text =
+			"Shares: \\\\localhost\\c$\\Windows, \\\\fs-01.corp.example.com\\dept$\\budget.xlsx, \\\\a\\b";
+		const matches = detectWindowsPaths(text);
+
+		expect(matches).toHaveLength(3);
+		expect(matches[0]).toMatchObject({
+			normalizedPath: "\\\\localhost\\c$\\Windows",
+			kind: "unc",
+		});
+		expect(matches[1]).toMatchObject({
+			normalizedPath: "\\\\fs-01.corp.example.com\\dept$\\budget.xlsx",
+			kind: "unc",
+		});
+		expect(matches[2]).toMatchObject({
+			normalizedPath: "\\\\a\\b",
+			kind: "unc",
+		});
+	});
+
+	it("detects lowercase drive letters and drive roots", () => {
+		const text = "Check c:\\dev\\notes\\readme.md and z:\\";
+		const matches = detectWindowsPaths(text);
+
+		expect(matches).toHaveLength(2);
+		expect(matches[0].normalizedPath).toBe("c:\\dev\\notes\\readme.md");
+		expect(matches[1].normalizedPath).toBe("z:\\");
+	});
+
+	it("handles balanced vs wrapping square/curly brackets and multiple trailing punctuation", () => {
+		const text =
+			"See [C:\\Data\\item[1].json], {C:\\Data\\cfg{dev}.yaml}, and C:\\Logs\\err.log?!...;:";
+		const matches = detectWindowsPaths(text);
+
+		expect(matches).toHaveLength(3);
+		expect(matches[0].normalizedPath).toBe("C:\\Data\\item[1].json");
+		expect(matches[1].normalizedPath).toBe("C:\\Data\\cfg{dev}.yaml");
+		expect(matches[2].normalizedPath).toBe("C:\\Logs\\err.log");
+	});
+
+	it("ignores embedded drive patterns inside words and returns empty array for empty text", () => {
+		expect(detectWindowsPaths("")).toEqual([]);
+		expect(detectWindowsPaths("fooC:\\bar\\baz.txt and 1C:\\test\\file.txt")).toEqual([]);
+	});
 });
 
 describe("normalizeWindowsPath", () => {
@@ -192,6 +237,14 @@ describe("normalizeWindowsPath", () => {
 		});
 		expect(normalizeWindowsPath("\\\\onlyserver")).toBeNull();
 		expect(normalizeWindowsPath("https://obsidian.md")).toBeNull();
+		expect(normalizeWindowsPath("")).toBeNull();
+		expect(normalizeWindowsPath('""')).toBeNull();
+		expect(normalizeWindowsPath("<>")).toBeNull();
+	});
+
+	it("rejects NTFS alternate data streams and colons after the drive letter", () => {
+		expect(normalizeWindowsPath("C:\\Folder\\file.txt:Zone.Identifier")).toBeNull();
+		expect(normalizeWindowsPath("\\\\server\\share\\file.txt:stream")).toBeNull();
 	});
 
 	it("rejects Win32 device namespaces, path traversal segments, and control characters", () => {
@@ -209,14 +262,48 @@ describe("normalizeWindowsPath", () => {
 });
 
 describe("isExecutableWindowsPath", () => {
-	it("identifies executable, script, and shortcut extensions including trailing dots", () => {
-		expect(isExecutableWindowsPath("C:\\Windows\\notepad.exe")).toBe(true);
-		expect(isExecutableWindowsPath("\\\\server\\share\\setup.BAT")).toBe(true);
-		expect(isExecutableWindowsPath("C:\\Scripts\\deploy.ps1")).toBe(true);
-		expect(isExecutableWindowsPath("C:\\Users\\Public\\shortcut.lnk")).toBe(true);
+	const dangerousExtensions = [
+		".exe",
+		".bat",
+		".cmd",
+		".com",
+		".scr",
+		".pif",
+		".msi",
+		".msp",
+		".ps1",
+		".psm1",
+		".vbs",
+		".vbe",
+		".js",
+		".jse",
+		".wsf",
+		".wsh",
+		".hta",
+		".cpl",
+		".msc",
+		".reg",
+		".lnk",
+		".inf",
+		".jar",
+		".scf",
+		".url",
+		".appref-ms",
+		".application",
+		".gadget",
+	];
+
+	it.each(dangerousExtensions)("flags %s as executable", (ext) => {
+		expect(isExecutableWindowsPath(`C:\\Temp\\payload${ext}`)).toBe(true);
+		expect(isExecutableWindowsPath(`\\\\server\\share\\PAYLOAD${ext.toUpperCase()}`)).toBe(true);
+	});
+
+	it("handles trailing dots/spaces and safe extensions properly", () => {
 		expect(isExecutableWindowsPath("C:\\Temp\\payload.exe.. ")).toBe(true);
 		expect(isExecutableWindowsPath("C:\\Docs\\report.pdf")).toBe(false);
 		expect(isExecutableWindowsPath("C:\\Docs\\notes.txt")).toBe(false);
 		expect(isExecutableWindowsPath("C:\\Folders\\my.exe.folder\\readme.md")).toBe(false);
+		expect(isExecutableWindowsPath("C:\\Folders\\noextension")).toBe(false);
+		expect(isExecutableWindowsPath("C:\\Folders\\.hiddenfile")).toBe(false);
 	});
 });
