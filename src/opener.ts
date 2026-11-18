@@ -17,7 +17,6 @@ interface ConfirmModalOptions {
 	message: string;
 	targetPath: string;
 	confirmLabel: string;
-	confirmStyle: "warning" | "cta";
 	allowReveal: boolean;
 }
 
@@ -63,21 +62,14 @@ class ConfirmPathOpenModal extends Modal {
 			}),
 		);
 
-		buttonBar.addButton((btn) => {
-			btn.setButtonText(this.options.confirmLabel);
-			if (this.options.confirmStyle === "warning") {
-				if (typeof btn.setDestructive === "function") {
-					btn.setDestructive().setCta();
-				} else {
-					btn.setCta();
-				}
-			} else {
-				btn.setCta();
-			}
-			btn.onClick(() => {
-				this.finish("open");
-			});
-		});
+		buttonBar.addButton((btn) =>
+			btn
+				.setButtonText(this.options.confirmLabel)
+				.setCta()
+				.onClick(() => {
+					this.finish("open");
+				}),
+		);
 	}
 
 	onClose(): void {
@@ -149,7 +141,6 @@ async function confirmUncAccessIfNeeded(
 			"This link points to a remote UNC network path. Connecting to untrusted servers may expose network credentials:",
 		targetPath,
 		confirmLabel: "Open path",
-		confirmStyle: "cta",
 		allowReveal: false,
 	});
 	return decision === "open";
@@ -210,7 +201,6 @@ export async function openWindowsPath(
 				"This link points to an executable, script, or shortcut file that may run code on your computer:",
 			targetPath,
 			confirmLabel: "Run file",
-			confirmStyle: "warning",
 			allowReveal: true,
 		});
 		if (decision === "cancel") {

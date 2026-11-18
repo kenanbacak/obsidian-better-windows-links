@@ -1,7 +1,7 @@
 {
 	"id": "better-windows-links",
 	"name": "Better Windows Links",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"minAppVersion": "1.5.0",
 	"description": "Automatically detect and open local Windows and UNC network paths directly from your notes.",
 	"author": "kenanbacak",
