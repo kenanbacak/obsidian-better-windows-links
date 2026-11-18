@@ -44,7 +44,7 @@ class ConfirmPathOpenModal extends Modal {
 
 		contentEl.createEl("p", { text: this.options.message });
 
-		const pathBox = contentEl.createEl("div", { cls: "windows-links-modal-path" });
+		const pathBox = contentEl.createDiv({ cls: "windows-links-modal-path" });
 		pathBox.createEl("code", { text: this.options.targetPath });
 
 		const buttonBar = new Setting(contentEl);
@@ -66,7 +66,11 @@ class ConfirmPathOpenModal extends Modal {
 		buttonBar.addButton((btn) => {
 			btn.setButtonText(this.options.confirmLabel);
 			if (this.options.confirmStyle === "warning") {
-				btn.setWarning();
+				if (typeof btn.setDestructive === "function") {
+					btn.setDestructive().setCta();
+				} else {
+					btn.setCta();
+				}
 			} else {
 				btn.setCta();
 			}

@@ -67,17 +67,9 @@ function populateLinkContent(link: HTMLAnchorElement, match: DetectedWindowsPath
 		const openChar = match.isQuoted ? "\"" : "<";
 		const closeChar = match.isQuoted ? "\"" : ">";
 
-		const openSpan = document.createElement("span");
-		openSpan.className = "windows-links-delimiter";
-		openSpan.textContent = openChar;
-
-		const closeSpan = document.createElement("span");
-		closeSpan.className = "windows-links-delimiter";
-		closeSpan.textContent = closeChar;
-
-		link.appendChild(openSpan);
-		link.appendChild(document.createTextNode(match.normalizedPath));
-		link.appendChild(closeSpan);
+		link.createSpan({ cls: "windows-links-delimiter", text: openChar });
+		link.appendText(match.normalizedPath);
+		link.createSpan({ cls: "windows-links-delimiter", text: closeChar });
 		return;
 	}
 
@@ -120,28 +112,30 @@ export function processReadingViewLinks(
 			continue;
 		}
 
-		const fragment = document.createDocumentFragment();
+		const fragment = createFragment();
 		let cursor = 0;
 
 		for (const match of matches) {
 			if (match.start > cursor) {
-				fragment.appendChild(document.createTextNode(text.slice(cursor, match.start)));
+				fragment.appendText(text.slice(cursor, match.start));
 			}
 
-			const link = document.createElement("a");
-			link.className = "windows-links-path external-link";
-			link.href = "#";
-			link.dataset.winPath = match.normalizedPath;
-			link.setAttribute("aria-label", match.normalizedPath);
-			link.setAttribute("title", match.normalizedPath);
+			const link = fragment.createEl("a", {
+				cls: "windows-links-path external-link",
+				href: "#",
+				title: match.normalizedPath,
+				attr: {
+					"data-win-path": match.normalizedPath,
+					"aria-label": match.normalizedPath,
+				},
+			});
 			populateLinkContent(link, match);
 
-			fragment.appendChild(link);
 			cursor = match.end;
 		}
 
 		if (cursor < text.length) {
-			fragment.appendChild(document.createTextNode(text.slice(cursor)));
+			fragment.appendText(text.slice(cursor));
 		}
 
 		textNode.replaceWith(fragment);
